@@ -3,6 +3,8 @@ byte signalState = SETUP;
 
 bool isOn = false;
 
+Timer previewTimer;
+
 void setup() {
   // put your setup code here, to run once:
 
@@ -16,7 +18,11 @@ void loop() {
       break;
     case HIDE:
       hideLoop();
-      hideDisplay();
+      if (previewTimer.isExpired()) {
+        hideDisplay();
+      } else {
+        revealDisplay();
+      }
       break;
     case REVEAL:
       revealLoop();
@@ -61,6 +67,10 @@ void hideLoop() {
         signalState = REVEAL;
       }
     }
+  }
+
+  if (buttonSingleClicked() && isOn) {
+    previewTimer.set(1000);
   }
 }
 
