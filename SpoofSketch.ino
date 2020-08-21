@@ -3,6 +3,9 @@ byte signalState = SETUP;
 
 bool isOn = false;
 
+bool isChaos = false;
+
+#define PREVIEW_TIME 1000
 Timer previewTimer;
 
 void setup() {
@@ -18,11 +21,7 @@ void loop() {
       break;
     case HIDE:
       hideLoop();
-      if (previewTimer.isExpired()) {
-        hideDisplay();
-      } else {
-        revealDisplay();
-      }
+      hideDisplay();
       break;
     case REVEAL:
       revealLoop();
@@ -34,22 +33,33 @@ void loop() {
 
   buttonSingleClicked();
   buttonDoubleClicked();
+  buttonMultiClicked();
 }
 
 void setupLoop() {
 
-  if (buttonSingleClicked()) {
+  if (buttonSingleClicked() && !isChaos) {
     isOn = !isOn;
   }
 
   if (buttonDoubleClicked()) {
     signalState = HIDE;
+    if (isChaos) {
+      isOn = random(1);
+    }
+  }
+
+  if (buttonMultiClicked() && buttonClickCount() == 3) {
+    isChaos = !isChaos;
   }
 
   FOREACH_FACE(f) {
     if (!isValueReceivedOnFaceExpired(f)) {//neighbor!
       if (getLastValueReceivedOnFace(f) == HIDE) {
         signalState = HIDE;
+        if (isChaos) {
+          isOn = random(1);
+        }
       }
     }
   }
@@ -69,50 +79,87 @@ void hideLoop() {
     }
   }
 
-  if (buttonSingleClicked() && isOn) {
-    previewTimer.set(1000);
+  if (buttonSingleClicked()) {
+    previewTimer.set(PREVIEW_TIME);
   }
 }
 
 void revealLoop() {
   if (buttonDoubleClicked()) {
     signalState = SETUP;
+    if (isChaos) {
+      isOn = false;
+    }
   }
 
   FOREACH_FACE(f) {
     if (!isValueReceivedOnFaceExpired(f)) {//neighbor!
       if (getLastValueReceivedOnFace(f) == SETUP) {
         signalState = SETUP;
+        if (isChaos) {
+          isOn = false;
+        }
       }
     }
   }
 }
 
 void setupDisplay() {
-  setColor(dim(CYAN, 50));
+  //set base colors
+  setColor(YELLOW);
+  setColorOnFace(dim(YELLOW, 150), 2);
+  setColorOnFace(dim(YELLOW, 150), 3);
+  setColorOnFace(dim(YELLOW, 100), 4);
+  setColorOnFace(dim(YELLOW, 100), 5);
+
   if (isOn) {
-    setColorOnFace(dim(WHITE, 150), random(5));
-    setColorOnFace(dim(WHITE, 150), random(5));
-    setColorOnFace(dim(WHITE, 150), random(5));
-  } else {
-    setColorOnFace(OFF, random(5));
-    setColorOnFace(OFF, random(5));
+    byte segmentLight = (millis() / 200) % 4;
+    switch (segmentLight) {
+      case 0:
+        setColorOnFace(RED, 0);
+        setColorOnFace(RED, 1);
+        break;
+      case 1:
+        setColorOnFace(dim(RED, 150), 2);
+        setColorOnFace(dim(RED, 150), 3);
+        break;
+      case 2:
+        setColorOnFace(dim(RED, 100), 4);
+        setColorOnFace(dim(RED, 100), 5);
+        break;
+    }
+  }
+
+  if (isChaos) {
     setColorOnFace(OFF, random(5));
   }
 }
 
 void hideDisplay() {
-  FOREACH_FACE(f) {
-    setColorOnFace(dim(YELLOW, random(100)), f);
+  setColor(OFF);
+  byte segmentLight = (millis() / 1000) % 3;
+  byte segmentProgress = map(millis() % 1000, 0, 1000, 0, 255);
+  setColorOnFace(dim(YELLOW, segmentProgress), segmentLight * 2);
+  setColorOnFace(dim(YELLOW, segmentProgress), (segmentLight * 2) + 1);
+
+  if (!previewTimer.isExpired()) {
+    if (isOn) {
+      setColorOnFace(RED, random(5));
+      setColorOnFace(RED, random(5));
+    } else {
+      setColorOnFace(CYAN, random(5));
+      setColorOnFace(CYAN, random(5));
+    }
   }
 }
 
 void revealDisplay() {
+  setColor(OFF);
   if (isOn) {
-    setColor(GREEN);
-    setColorOnFace(OFF, random(5));
+    setColorOnFace(RED, random(5));
+    setColorOnFace(RED, random(5));
   } else {
-    setColor(OFF);
-    setColorOnFace(dim(GREEN, 100), random(5));
+    setColorOnFace(CYAN, random(5));
+    setColorOnFace(CYAN, random(5));
   }
 }
